@@ -1,0 +1,90 @@
+{
+  "AWSEBDockerrunVersion": 2,
+  "executionRoleArn": "arn:aws:iam::{{ AWS_DEFAULT_REGION }}:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::{{ AWS_DEFAULT_REGION }}:role/ecsTaskExecutionRole"
+  "containerDefinitions": [
+    {
+      "essential": true,
+      "image": "{{ AWS_ACCOUNT_ID_ECR }}.dkr.ecr.{{ AWS_DEFAULT_REGION }}.amazonaws.com/{{ CIRCLE_PROJECT_REPONAME }}:{{ CIRCLE_TAG }}",
+      "memory": 512,
+      "mountPoints": [
+        {
+          "containerPath": "/var/log/nginx",
+          "sourceVolume": "awseb-logs-{{ CIRCLE_PROJECT_REPONAME }}"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DB_NAME",
+          "valueFrom": "arn:aws:ssm:{{ AWS_DEFAULT_REGION }}:AWS_ACCOUNT_ID_ECR:parameter/identity-service/{{ EB_ENVIRONMENT }}/DB_NAME"
+        },
+        {
+          "name": "DB_USER_NAME",
+          "valueFrom": "arn:aws:ssm:{{ AWS_DEFAULT_REGION }}:AWS_ACCOUNT_ID_ECR:parameter/identity-service/{{ EB_ENVIRONMENT }}/DB_USER_NAME"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "arn:aws:ssm:{{ AWS_DEFAULT_REGION }}:AWS_ACCOUNT_ID_ECR:parameter/identity-service/{{ EB_ENVIRONMENT }}/DB_PASSWORD"
+        },
+        {
+          "name": "DB_HOST",
+          "valueFrom": "arn:aws:ssm:{{ AWS_DEFAULT_REGION }}:AWS_ACCOUNT_ID_ECR:parameter/identity-service/{{ EB_ENVIRONMENT }}/DB_HOST"
+        },
+        {
+          "name": "REDIS_SERVER",
+          "valueFrom": "arn:aws:ssm:{{ AWS_DEFAULT_REGION }}:AWS_ACCOUNT_ID_ECR:parameter/identity-service/{{ EB_ENVIRONMENT }}/REDIS_SERVER"
+        },
+        {
+          "name": "URL_QUEUE_SERVICE",
+          "valueFrom": "arn:aws:ssm:{{ AWS_DEFAULT_REGION }}:AWS_ACCOUNT_ID_ECR:parameter/identity-service/{{ EB_ENVIRONMENT }}/URL_QUEUE_SERVICE"
+        },
+        {
+          "name": "URL_DEVICE_SERVICE",
+          "valueFrom": "arn:aws:ssm:{{ AWS_DEFAULT_REGION }}:AWS_ACCOUNT_ID_ECR:parameter/identity-service/{{ EB_ENVIRONMENT }}/URL_DEVICE_SERVICE"
+        },
+        {
+          "name": "URL_SMS_SERVICE",
+          "valueFrom": "arn:aws:ssm:{{ AWS_DEFAULT_REGION }}:AWS_ACCOUNT_ID_ECR:parameter/identity-service/{{ EB_ENVIRONMENT }}/URL_SMS_SERVICE"
+        },
+        {
+          "name": "URL_FILE_SERVICE",
+          "valueFrom": "arn:aws:ssm:{{ AWS_DEFAULT_REGION }}:AWS_ACCOUNT_ID_ECR:parameter/identity-service/{{ EB_ENVIRONMENT }}/URL_FILE_SERVICE"
+        },
+        {
+          "name": "URL_DOCUMENT_SERVICE",
+          "valueFrom": "arn:aws:ssm:{{ AWS_DEFAULT_REGION }}:AWS_ACCOUNT_ID_ECR:parameter/identity-service/{{ EB_ENVIRONMENT }}/URL_DOCUMENT_SERVICE"
+        },
+        {
+          "name": "URL_BANKING_SERVICE",
+          "valueFrom": "arn:aws:ssm:{{ AWS_DEFAULT_REGION }}:AWS_ACCOUNT_ID_ECR:parameter/identity-service/{{ EB_ENVIRONMENT }}/URL_BANKING_SERVICE"
+        }
+      ],
+      "environment": [
+        {
+          "name": "CIRCLE_TAG",
+          "value": "{{ CIRCLE_TAG }}"
+        },
+        {
+          "name": "SERVER_PORT",
+          "value": "{{ SERVER_PORT }}"
+        }
+      ],
+      "name": "{{ CIRCLE_PROJECT_REPONAME }}",
+      "portMappings": [
+        {
+          "containerPort": "{{ SERVER_PORT }}",
+          "hostPort": 80
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-create-group": true,
+          "awslogs-group": "{{ EB_ENVIRONMENT }}-{{ CIRCLE_PROJECT_REPONAME }}",
+          "awslogs-stream-prefix": "{{ APPLICATION_VERSION }}",
+          "awslogs-region": "{{ AWS_DEFAULT_REGION }}"
+        }
+      }
+    }
+  ]
+}

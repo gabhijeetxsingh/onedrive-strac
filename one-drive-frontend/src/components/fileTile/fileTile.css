@@ -1,0 +1,63 @@
+/* FileTile.css */
+
+.file-tile {
+    width: 300px;
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+  }
+  .file-details-content {
+    display: flex;
+    align-items: center;
+  }
+  
+  .file-metadata {
+    margin-left: 8px;
+  }
+  .file-tile-header {
+    padding: 8px;
+    background-color: #e3f2fd;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+  }
+  
+  .file-tile-header:hover {
+    background-color: #bbdefb;
+  }
+  
+  .file-title {
+    font-weight: bold;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 80%;
+  }
+  
+  .file-actions {
+    display: flex;
+    align-items: center;
+  }
+  
+  .file-thumbnail {
+    height: 140px;
+    object-fit: contain;
+    border: 1px solid #ddd;
+    cursor: pointer;
+  }
+  
+  .file-avatar {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+  }
+  
+  .file-details {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px;
+  }
+  

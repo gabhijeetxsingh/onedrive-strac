@@ -1,0 +1,86 @@
+# https://github.com/RobinNagpal/kubernetes-tutorials/tree/master/06_tools/007_alb_ingress/01_eks
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${SERVICE_NAME}
+  labels:
+    app: ${SERVICE_NAME}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ${SERVICE_NAME}
+  template:
+    metadata:
+      labels:
+        app: ${SERVICE_NAME}
+    spec:
+      containers:
+      - name: ${SERVICE_NAME}
+        image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${CIRCLE_PROJECT_REPONAME}:${CIRCLECI_TAG}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          protocol: TCP
+        env:
+        - name: DB_PORT
+          value: ${DB_PORT}
+        - name: VERSION
+          value: ${CIRCLECI_TAG}
+        - name: NAME
+          value: ${SERVICE_NAME}
+        - name: DB_NAME
+          value: $DB_NAME
+        - name: DB_USER_NAME
+          value: $DB_USER_NAME
+        - name: DB_PASSWORD
+          value: $DB_PASSWORD
+        - name: DB_HOST
+          value: $DB_HOST
+        - name: REDIS_SERVER
+          value: $REDIS_SERVER
+        - name: AWS_S3_ACCESS_KEY_ID
+          value: $AWS_S3_ACCESS_KEY_ID
+        - name: AWS_S3_SECRET_ACCESS_KEY
+          value: $AWS_S3_SECRET_ACCESS_KEY
+        - name: AWS_S3_REGION
+          value: $AWS_S3_REGION
+        - name: AWS_S3_BUCKET_NAME
+          value: $AWS_S3_BUCKET_NAME
+        - name: FCM_SERVER_KEY
+          value: ${FCM_SERVER_KEY}
+        - name: IDENTITY_SERVICE_URL
+          value: ${IDENTITY_SERVICE_URL}
+        - name: DOMAIN_URL
+          value: ${DOMAIN_URL}
+        readinessProbe:
+          httpGet:
+            path: /healthcheck
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 1
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: 3000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 1
+          
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${SERVICE_NAME}
+  labels:
+    app: ${SERVICE_NAME}
+spec:
+  type: NodePort
+  selector:
+    app: ${SERVICE_NAME}
+  ports:
+    - port: 80
+      targetPort: 3000

@@ -1,0 +1,197 @@
+version: 2.1
+
+executors:
+  toolbox-executor:
+    docker:
+      - image: ronins/toolbox:latest
+        aws_auth:
+          aws_access_key_id: ${AWS_ACCESS_KEY_ID}
+          aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY}
+jobs:
+  deploy:
+    executor: toolbox-executor
+    parameters:
+      environment:
+        type: enum
+        enum: ["demo","ops", "dev", "qa", "demo", "uat", "sit", 'pre-prod', "prod"]
+      weight:
+        type: enum
+        enum: ["small", "medium", "large"]
+      ssh_db_connection:
+        type: boolean
+        default: false
+      auto_scale:
+        type: boolean
+        default: false
+      project_name:
+        type: string
+        default: api
+      service_name:
+        type: string
+        default: api
+      domain_name:
+        type: string
+        default: devcartel.com
+    steps:
+      - checkout
+      - run:
+          name: Creating infrastructure and deploying stack
+          environment:
+            ENVIRONMENT: << parameters.environment >>
+            EKS_WEIGHT: << parameters.weight >>
+            PROJECT_NAME: << parameters.project_name >>
+            DOMAIN_NAME: << parameters.domain_name >>
+            CIRCLECI_TAG: << pipeline.git.tag >>
+            SERVICE_NAME: << parameters.service_name >>
+            SSH_DB_CONNECTION: << parameters.ssh_db_connection >>
+            AUTO_SCALING: << parameters.auto_scale >>
+            PORT: 80
+          command: |
+            source /ops/comman-functions.sh
+            install_common_dependencies
+            validate_aws_credetails
+            create_vpc
+            create_postgres_rds
+            bash /ops/cd/infra-pipeline.sh /ops/cd `pwd`/ops/cd /ops/comman-functions.sh
+  rds_snapshot:
+    executor: toolbox-executor
+    parameters:
+      ssh_db_connection:
+        type: boolean
+        default: false    
+      environment:
+        type: enum
+        enum: ["demo","ops", "dev", "qa", "demo", "uat", "sit", 'pre-prod', "prod"]
+      project_name:
+        type: string
+        default: api
+      service_name:
+        type: string
+        default: api
+    steps:
+      - checkout
+      - run:
+          name: backup rds instance
+          environment:
+            ENVIRONMENT: << parameters.environment >>
+            SSH_DB_CONNECTION: << parameters.ssh_db_connection >>
+            PROJECT_NAME: << parameters.project_name >>
+          command: |
+            source /ops/comman-functions.sh
+            install_common_dependencies
+            validate_aws_credetails
+            create_rds_snapshot
+workflows:
+  build-and-deploy:
+    jobs:
+      - deploy:
+          name: deploy_dev
+          environment: dev
+          weight: large
+          context: DevcartalDev
+          auto_scale: true
+          project_name: api
+          service_name: api
+          domain_name: d
+          filters: &filters-staging # this yaml anchor is setting these values to "filters-staging"
+            tags:
+              only: 
+                - /1.0.*/
+            branches:
+              ignore: /.*/
+      - approval:
+          name: qa_approval
+          type: approval
+          requires:
+            - deploy_dev
+          filters:
+            <<: *filters-staging # this is calling the previously set yaml anchor
+      - deploy:
+          name: deploy_qa
+          environment: qa
+          weight: large
+          context: DevcartalQa
+          auto_scale: true
+          project_name: api
+          service_name: api
+          domain_name: devcartel.com
+          requires:
+            - qa_approval
+          filters:
+            <<: *filters-staging # this is calling the previously set yaml anchor
+      - approval:
+          name: deploy_qa_prod_approval
+          type: approval
+          filters: &filters-production # this yaml anchor is setting these values to "filters-staging"
+            tags:
+              only: 
+                - /^v.*/
+            branches:
+              ignore: /.*/
+      - deploy:
+          name: deploy_qa_prod
+          environment: qa
+          weight: large
+          context: DevcartalQa
+          auto_scale: true
+          project_name: api
+          service_name: api
+          domain_name: devcartel.com
+          requires:
+            - deploy_qa_prod_approval
+          filters:
+            <<: *filters-production # this is calling the previously set yaml anchor
+      - approval:
+          name: pre_prod_approval
+          type: approval
+          # requires:
+          #   - deploy_qa_prod
+          filters:
+            <<: *filters-production # this is calling the previously set yaml anchor
+      - deploy:
+          name: deploy_pre_prod
+          environment: pre-prod
+          weight: large
+          context: DevcartalPreProd
+          auto_scale: true
+          project_name: api
+          service_name: api
+          domain_name: devcartel.com
+          requires:
+            - pre_prod_approval
+          filters:
+            <<: *filters-production # this is calling the previously set yaml anchor
+      - approval:
+          name: prod_approval
+          type: approval
+          # requires:
+          #   - deploy_pre_prod
+          filters:
+            <<: *filters-production # this is calling the previously set yaml anchor
+      - rds_snapshot:
+          name: rds_snapshot_prod
+          environment: prod
+          context: DevcartalProd
+          ssh_db_connection: true
+          project_name: api
+          service_name: api
+          requires:
+            - prod_approval
+          filters:
+            <<: *filters-production # this is calling the previously set yaml anchor
+      - deploy:
+          name: deploy_prod
+          environment: prod
+          weight: large
+          context: DevcartalProd
+          auto_scale: true
+          ssh_db_connection: true
+          project_name: api
+          service_name: api
+          domain_name: devcartel.com
+          requires:
+            - rds_snapshot_prod
+          filters:
+            <<: *filters-production # this is calling the previously set yaml anchor
+
+  
