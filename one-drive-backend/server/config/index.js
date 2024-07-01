@@ -16,5 +16,5 @@ module.exports = {
 
   REDIRECT_URI: process.env.REDIRECT_URI || 'http://localhost:3000/callback',
   CLIENT_ID: process.env.CLIENT_ID,
-  CLIENT_SECRET: process.env.CLIENT_SECRET
+  CLIENT_SECRET: process.env.CLIENT_SECRET,
 };
